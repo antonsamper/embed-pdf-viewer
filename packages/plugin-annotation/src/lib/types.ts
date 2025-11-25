@@ -9,6 +9,7 @@ import {
   Task,
 } from '@embedpdf/models';
 import { AnnotationTool } from './tools/types';
+import { DuplicateAnnotationResult, DuplicateAnnotationOptions } from './utils/duplicate-to-all-pages';
 
 export type AnnotationEvent =
   | {
@@ -148,6 +149,20 @@ export interface AnnotationCapability {
   ) => void;
 
   renderAnnotation: (options: RenderAnnotationOptions) => Task<Blob, PdfErrorReason>;
+
+  /**
+   * Duplicates an annotation to all pages in the document.
+   * The annotation's position and size are preserved relative to page coordinates.
+   * If an annotation would fall outside a target page's bounds, it is clipped to fit.
+   *
+   * @param annotationId - The ID of the annotation to duplicate
+   * @param options - Duplication options
+   * @returns A result containing the created annotations and pages where clipping was applied
+   */
+  duplicateAnnotationToAllPages: <T extends PdfAnnotationObject>(
+    annotationId: string,
+    options?: DuplicateAnnotationOptions,
+  ) => DuplicateAnnotationResult<T> | null;
 
   onStateChange: EventHook<AnnotationState>;
   onActiveToolChange: EventHook<AnnotationTool | null>;

@@ -274,9 +274,51 @@ A selection of key methods available on the `provides` object:
 | **`selectAnnotation(..)`** | Programmatically selects an annotation. |
 | **`getSelectedAnnotation()`** | Returns the currently selected `TrackedAnnotation` object, or `null`. |
 | **`importAnnotations(..)`**| Imports an array of annotations into the viewer. |
+| **`duplicateAnnotationToAllPages(..)`** | Copies an annotation to all other pages in the document. |
 | **`commit()`** | Manually saves all pending annotation changes to the PDF document. |
 | **`onStateChange(cb)`** | Subscribes to any change in the annotation state. |
 | **`onAnnotationEvent(cb)`**| Subscribes to events like annotation creation, updates, or deletion. |
+
+### Duplicating Annotations to All Pages
+
+The `duplicateAnnotationToAllPages` method allows you to copy an annotation to every page in the document. This is useful for adding watermarks, headers, footers, or repeated stamps across all pages.
+
+```tsx
+const copyToAllPages = () => {
+  const selection = annotationApi?.getSelectedAnnotation();
+  if (selection) {
+    const result = annotationApi?.duplicateAnnotationToAllPages(selection.object.id);
+    if (result) {
+      console.log(`Created ${result.annotations.length} copies`);
+      if (result.clippedPages.length > 0) {
+        console.warn(`Annotations were clipped on pages: ${result.clippedPages.join(', ')}`);
+      }
+    }
+  }
+};
+```
+
+#### Options
+
+You can pass an options object to control the behavior:
+
+```tsx
+// Include the source page in the duplication (creates a copy on the same page)
+annotationApi?.duplicateAnnotationToAllPages(annotationId, { includeSourcePage: true });
+```
+
+#### Return Value
+
+The method returns a `DuplicateAnnotationResult` object:
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| **`annotations`** | `PdfAnnotationObject[]` | Array of newly created annotations (one per page). |
+| **`clippedPages`** | `number[]` | Page indices where the annotation was adjusted to fit within bounds. |
+
+#### Handling Different Page Sizes
+
+When duplicating annotations to pages with different sizes, the annotation's position is preserved in page coordinates. If an annotation would extend beyond a target page's boundaries, it is automatically clipped to fit within the page bounds, and a warning is logged to the console.
 
 ### The `AnnotationEvent` Object
 

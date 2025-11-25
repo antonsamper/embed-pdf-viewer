@@ -58,6 +58,11 @@ import {
 } from './handlers';
 import { PatchRegistry, TransformContext } from './patching/patch-registry';
 import { patchInk, patchLine, patchPolyline, patchPolygon } from './patching/patches';
+import {
+  generateDuplicateAnnotations,
+  DuplicateAnnotationResult,
+  DuplicateAnnotationOptions,
+} from './utils/duplicate-to-all-pages';
 
 export class AnnotationPlugin extends BasePlugin<
   AnnotationPluginConfig,
@@ -213,6 +218,8 @@ export class AnnotationPlugin extends BasePlugin<
       updateAnnotation: (pageIndex, id, patch) => this.updateAnnotation(pageIndex, id, patch),
       deleteAnnotation: (pageIndex, id) => this.deleteAnnotation(pageIndex, id),
       renderAnnotation: (options) => this.renderAnnotation(options),
+      duplicateAnnotationToAllPages: (annotationId, options) =>
+        this.duplicateAnnotationToAllPages(annotationId, options),
       onStateChange: this.state$.on,
       onActiveToolChange: this.activeTool$.on,
       onAnnotationEvent: this.events$.on,
@@ -665,5 +672,47 @@ export class AnnotationPlugin extends BasePlugin<
 
     // Fall back to plugin config
     return this.config[setting] !== false;
+  }
+
+  /**
+   * Duplicates an annotation to all pages in the document.
+   * Creates copies of the annotation on each page, preserving position and size.
+   *
+   * @param annotationId - The ID of the annotation to duplicate
+   * @param options - Duplication options
+   * @returns Result containing created annotations and clipped pages, or null if failed
+   */
+  private duplicateAnnotationToAllPages<T extends PdfAnnotationObject>(
+    annotationId: string,
+    options?: DuplicateAnnotationOptions,
+  ): DuplicateAnnotationResult<T> | null {
+    const doc = this.coreState.core.document;
+    if (!doc) {
+      console.warn('Cannot duplicate annotation: No document loaded');
+      return null;
+    }
+
+    const trackedAnnotation = this.state.byUid[annotationId];
+    if (!trackedAnnotation) {
+      console.warn(`Cannot duplicate annotation: Annotation with id ${annotationId} not found`);
+      return null;
+    }
+
+    const sourceAnnotation = trackedAnnotation.object as T;
+
+    try {
+      // Generate duplicate annotations for all pages
+      const result = generateDuplicateAnnotations<T>(sourceAnnotation, doc.pages, options);
+
+      // Create each duplicated annotation through the standard flow
+      for (const annotation of result.annotations) {
+        this.createAnnotation(annotation.pageIndex, annotation);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Failed to duplicate annotation to all pages:', error);
+      return null;
+    }
   }
 }
