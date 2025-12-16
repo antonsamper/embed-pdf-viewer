@@ -222,5 +222,45 @@ A selection of key methods available on the `provides.value` object:
 | **`addTool(tool)`** | Registers a new custom `AnnotationTool`. |
 | **`deleteAnnotation(..)`** | Deletes an annotation from a page. |
 | **`getSelectedAnnotation()`** | Returns the currently selected `TrackedAnnotation` object, or `null`. |
+| **`duplicateAnnotationToAllPages(..)`** | Copies an annotation to all other pages in the document. |
 | **`onStateChange(cb)`** | Subscribes to any change in the annotation state. Returns an `unsubscribe` function. |
 | **`onAnnotationEvent(cb)`**| Subscribes to events like annotation creation, updates, or deletion. Returns an `unsubscribe` function. |
+
+### Duplicating Annotations to All Pages
+
+The `duplicateAnnotationToAllPages` method allows you to copy an annotation to every page in the document. This is useful for adding watermarks, headers, footers, or repeated stamps across all pages.
+
+```vue
+<script setup lang="ts">
+const copyToAllPages = () => {
+  const selection = annotationApi.value?.getSelectedAnnotation();
+  if (selection) {
+    const result = annotationApi.value?.duplicateAnnotationToAllPages(selection.object.id);
+    if (result) {
+      console.log(`Created ${result.annotations.length} copies`);
+      if (result.clippedPages.length > 0) {
+        console.warn(`Annotations were clipped on pages: ${result.clippedPages.join(', ')}`);
+      }
+    }
+  }
+};
+</script>
+```
+
+#### Options
+
+You can pass an options object to control the behavior:
+
+```typescript
+// Include the source page in the duplication (creates a copy on the same page)
+annotationApi.value?.duplicateAnnotationToAllPages(annotationId, { includeSourcePage: true });
+```
+
+#### Return Value
+
+The method returns a `DuplicateAnnotationResult` object:
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| **`annotations`** | `PdfAnnotationObject[]` | Array of newly created annotations (one per page). |
+| **`clippedPages`** | `number[]` | Page indices where the annotation was adjusted to fit within bounds. |

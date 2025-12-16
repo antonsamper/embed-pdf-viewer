@@ -27,3 +27,9 @@ export * from './tools/types';
 export * from './tools/tools-utils';
 export * as patching from './patching';
 export { initialState } from './reducer';
+export {
+  generateDuplicateAnnotations,
+  createDuplicateAnnotation,
+  type DuplicateAnnotationResult,
+  type DuplicateAnnotationOptions,
+} from './utils/duplicate-to-all-pages';
