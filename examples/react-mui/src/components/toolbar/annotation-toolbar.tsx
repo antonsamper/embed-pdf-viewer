@@ -1,17 +1,26 @@
-import { AppBar, Toolbar as MuiToolbar } from '@mui/material';
+import { AppBar, Toolbar as MuiToolbar, Divider } from '@mui/material';
 import TextFieldsOutlinedIcon from '@mui/icons-material/TextFieldsOutlined';
 import GestureOutlinedIcon from '@mui/icons-material/GestureOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined';
 import SquareOutlinedIcon from '@mui/icons-material/SquareOutlined';
 import NorthEastOutlinedIcon from '@mui/icons-material/NorthEastOutlined';
-import { AnnotationTool, useAnnotationCapability } from '@embedpdf/plugin-annotation/react';
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import ContentPasteOutlinedIcon from '@mui/icons-material/ContentPasteOutlined';
+import { AnnotationTool, useAnnotation } from '@embedpdf/plugin-annotation/react';
 import { useEffect, useState } from 'react';
 import { ToggleIconButton } from '../toggle-icon-button';
+import { useAnnotationClipboard } from '../../hooks/use-annotation-clipboard';
+import { IconButton } from '@mui/material';
 
 export const AnnotationToolbar = () => {
-  const { provides: annotationProvider } = useAnnotationCapability();
+  const { provides: annotationProvider, state: annotationState } = useAnnotation();
+  const { copyAnnotation, pasteAnnotation, canPaste } = useAnnotationClipboard();
   const [activeTool, setActiveTool] = useState<AnnotationTool | null>(null);
+
+  const selectedAnnotation = annotationState?.selectedUid
+    ? annotationState.byUid[annotationState.selectedUid]
+    : null;
 
   useEffect(() => {
     if (!annotationProvider) return;
@@ -61,6 +70,18 @@ export const AnnotationToolbar = () => {
     annotationProvider.setActiveTool(currentId === 'stampApproved' ? null : 'stampApproved');
   };
 
+  const handleCopy = () => {
+    if (selectedAnnotation) {
+      copyAnnotation(selectedAnnotation);
+    }
+  };
+
+  const handlePaste = () => {
+    pasteAnnotation(selectedAnnotation ?? undefined);
+  };
+
+  // Keyboard shortcuts moved to application.tsx (via AnnotationClipboardManager)
+
   return (
     <AppBar
       position="static"
@@ -73,6 +94,25 @@ export const AnnotationToolbar = () => {
         disableGutters
         sx={{ gap: 1.5, px: 1.5, justifyContent: 'center' }}
       >
+        <IconButton
+          size="small"
+          onClick={handleCopy}
+          disabled={!selectedAnnotation}
+          aria-label="Copy annotation"
+        >
+          <ContentCopyOutlinedIcon fontSize="small" />
+        </IconButton>
+        <IconButton
+          size="small"
+          onClick={handlePaste}
+          disabled={!canPaste}
+          aria-label="Paste annotation"
+        >
+          <ContentPasteOutlinedIcon fontSize="small" />
+        </IconButton>
+
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, my: 1 }} />
+
         <ToggleIconButton
           tone="light"
           isOpen={activeTool?.id === 'freeText'}

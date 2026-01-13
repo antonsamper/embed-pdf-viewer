@@ -28,11 +28,12 @@ import {
   AnnotationPlugin,
   AnnotationPluginPackage,
   AnnotationTool,
+  useAnnotation,
 } from '@embedpdf/plugin-annotation/react';
 
 import { CircularProgress, Box, Alert } from '@mui/material';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 
 import { PageControls } from './components/page-controls';
 import { Search } from './components/search';
@@ -42,6 +43,60 @@ import { Toolbar } from './components/toolbar';
 import { ViewSidebarReverseIcon } from './icons';
 import { AnnotationSelectionMenu } from './components/annotation-selection-menu';
 import { RedactionSelectionMenu } from './components/redaction-selection-menu';
+import { useAnnotationClipboard } from './hooks/use-annotation-clipboard';
+
+const AnnotationClipboardManager = () => {
+  const { state: annotationState } = useAnnotation();
+  const { copyAnnotation, pasteAnnotation, canPaste } = useAnnotationClipboard();
+
+  const selectedAnnotation = annotationState?.selectedUid
+    ? annotationState.byUid[annotationState.selectedUid]
+    : null;
+
+  useEffect(() => {
+    const isTypingTarget = (t: EventTarget | null) => {
+      if (!(t instanceof HTMLElement)) return false;
+      const tag = t.tagName;
+      return (
+        t.isContentEditable ||
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        (tag === 'DIV' && t.getAttribute('role') === 'textbox')
+      );
+    };
+
+    const onKeyDown = async (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      if (isTypingTarget(e.target)) return;
+
+      const isCopy = (e.key === 'c' || e.code === 'KeyC') && (e.metaKey || e.ctrlKey);
+      const isPaste = (e.key === 'v' || e.code === 'KeyV') && (e.metaKey || e.ctrlKey);
+      if (!isCopy && !isPaste) return;
+
+      if (isCopy) {
+        if (selectedAnnotation) {
+          e.preventDefault();
+          copyAnnotation(selectedAnnotation);
+        }
+        return;
+      }
+
+      if (isPaste) {
+        if (canPaste) {
+          e.preventDefault();
+          pasteAnnotation(selectedAnnotation ?? undefined);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [selectedAnnotation, canPaste, copyAnnotation, pasteAnnotation]);
+
+  return null;
+};
 
 const plugins = [
   createPluginRegistration(LoaderPluginPackage, {
@@ -178,6 +233,7 @@ function App() {
               userSelect: 'none',
             }}
           >
+            <AnnotationClipboardManager />
             <Toolbar />
 
             {/* Main content area with sidebars */}
